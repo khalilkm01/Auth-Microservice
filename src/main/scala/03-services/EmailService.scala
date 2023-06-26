@@ -12,7 +12,7 @@ trait EmailService:
 
   def findByEmailAddress(findByEmailAddressDTO: FindByEmailAddressDTO): IO[ServerError, Email]
 
-  def createEmail(createEmailDTO: CreateEmailDTO): IO[ServerError, Email]
+  def createEmail(createEmailDTO: CreateEmailDTO): IO[ServerError, UUID]
 
   def updateEmailAddress(
     updateEmailAddressDTO: UpdateEmailAddressDTO

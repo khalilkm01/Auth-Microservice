@@ -4,10 +4,13 @@ import config.Config.AuthConfig
 import models.common.{ Auth, AuthData, ServerError }
 import models.enums.UserType
 import models.persisted.Login
-import clients.JwtClient
-import services.LoginService
+import clients.{ JwtClient, TwilioClient }
 import repositories.{ ContactNumberRepository, EmailRepository, LoginRepository }
 import repositories.quill.QuillContext
+import services.LoginService
+import services.implementation.contactNumber.ContactNumberHelper
+import services.implementation.email.EmailHelper
+import services.implementation.login.LoginHelper
 import zio.*
 import com.github.t3hnar.bcrypt.*
 import org.joda.time.DateTime
@@ -19,11 +22,15 @@ import javax.sql.DataSource
 
 class LoginServiceLive(
   jwtClient: JwtClient,
+  twilioClient: TwilioClient,
   loginRepository: LoginRepository,
   contactNumberRepository: ContactNumberRepository,
   emailRepository: EmailRepository,
   authConfig: AuthConfig
 ) extends LoginService
+    with ContactNumberHelper
+    with EmailHelper
+    with LoginHelper
     with ServiceAssistant:
 
   import LoginService._
@@ -33,41 +40,58 @@ class LoginServiceLive(
 
   override def createLogin(
     createLoginDTO: CreateLoginDTO
-  ): IO[ServerError, Login] =
-    transaction {
-      for {
-        now <- ZIO.succeed(DateTime.now)
-        email <- emailRepository
-          .connectEmail(createLoginDTO.emailId)
-        contactNumber <- contactNumberRepository
-          .connectNumber(createLoginDTO.contactNumberId)
-        newLogin <-
-          if (contactNumber && email)
-            loginRepository
-              .create(
-                Login(
-                  id = UUID.randomUUID,
-                  password = createLoginDTO.password.bcryptBounded(authConfig.private_key),
-                  blocked = false,
-                  user = createLoginDTO.user,
-                  emailId = createLoginDTO.emailId,
-                  contactNumberId = createLoginDTO.contactNumberId,
-                  now,
-                  now
-                )
-              )
-          else
-            ZIO.fail(
-              ServerError.ServiceError(
-                ServerError.ServiceErrorMessage.IllegalServiceCall
-              )
+  ): IO[ServerError, AuthData] =
+    transact {
+      for
+        contactNumber <-
+          contactNumberRepository
+            .getByNumber(
+              countryCode = createLoginDTO.countryCode,
+              digits = createLoginDTO.digits,
+              user = createLoginDTO.user
             )
-      } yield newLogin
-    }.provide(dataSource).catchAll(handleError)
+
+        emailId <-
+          createEmailHelper(
+            emailRepository = emailRepository,
+            emailAddress = createLoginDTO.emailAddress,
+            user = createLoginDTO.user
+          )
+
+        _ <- connectNumberHelper(
+          id = contactNumber.id,
+          code = createLoginDTO.code,
+          user = createLoginDTO.user,
+          twilioClient = twilioClient,
+          contactNumberRepository = contactNumberRepository
+        )
+
+        _ <- createUserHelper(
+          contactNumberId = contactNumber.id,
+          emailId = emailId,
+          password = createLoginDTO.password,
+          user = createLoginDTO.user,
+          emailRepository = emailRepository,
+          contactNumberRepository = contactNumberRepository,
+          loginRepository = loginRepository,
+          authConfig = authConfig
+        )
+
+        loginUser <-
+          loginByEmailHelper(
+            emailAddress = createLoginDTO.emailAddress,
+            password = createLoginDTO.password,
+            user = createLoginDTO.user,
+            loginRepository = loginRepository,
+            emailRepository = emailRepository,
+            jwtClient = jwtClient
+          )
+      yield loginUser
+    }
 
   override def updateLoginPassword(
     updateLoginPasswordDTO: UpdateLoginPasswordDTO
-  ): Task[Login] = transaction {
+  ): IO[ServerError, Boolean] = transact {
     for {
       dateTime    <- ZIO.succeed(DateTime.now())
       loginModel  <- loginRepository.getById(updateLoginPasswordDTO.loginId)
@@ -78,12 +102,14 @@ class LoginServiceLive(
         )
       login <-
         if (compare)
-          loginRepository.save(
-            loginModel.copy(
-              password = newPassword,
-              updatedAt = dateTime
+          loginRepository
+            .save(
+              loginModel.copy(
+                password = newPassword,
+                updatedAt = dateTime
+              )
             )
-          )
+            .as(true)
         else
           ZIO.fail(
             ServerError.ServiceError(
@@ -93,31 +119,26 @@ class LoginServiceLive(
           )
 
     } yield login
-  }.provide(dataSource).catchAll(handleError)
+  }
 
   override def loginByEmail(
     loginByEmailDTO: LoginByEmailDTO
   ): IO[ServerError, AuthData] =
-    transaction {
-      for {
-        email <- emailRepository.getByEmailAddress(emailAddress = loginByEmailDTO.email, user = loginByEmailDTO.user)
-        login <- loginRepository.getByEmailId(email.id)
-        compare <- ZIO
-          .fromTry(loginByEmailDTO.password.isBcryptedSafeBounded(login.password))
-        authData <-
-          if (compare)
-            jwtClient.generateToken(Auth(login.id, compare, loginByEmailDTO.user))
-          else
-            ZIO.fail(ServerError.ServiceError(ServerError.ServiceErrorMessage.LoginError))
-
-      } yield authData
-
-    }.provide(dataSource).catchAll(handleError)
+    transact {
+      loginByEmailHelper(
+        emailAddress = loginByEmailDTO.emailAddress,
+        password = loginByEmailDTO.password,
+        user = loginByEmailDTO.user,
+        loginRepository = loginRepository,
+        emailRepository = emailRepository,
+        jwtClient = jwtClient
+      )
+    }
 
 object LoginServiceLive:
   lazy val layer: ZLayer[
-    JwtClient with LoginRepository with EmailRepository with ContactNumberRepository with AuthConfig,
+    JwtClient with TwilioClient with LoginRepository with EmailRepository with ContactNumberRepository with AuthConfig,
     Throwable,
     LoginService
   ] =
-    ZLayer.fromFunction(LoginServiceLive(_, _, _, _, _))
+    ZLayer.fromFunction(LoginServiceLive(_, _, _, _, _, _))

@@ -6,63 +6,41 @@ import services.EmailService
 import org.joda.time.DateTime
 import repositories.quill.QuillContext
 import repositories.EmailRepository
+import services.implementation.email.EmailHelper
 import zio.*
 
 import java.sql.SQLException
 import java.util.UUID
 import javax.sql.DataSource
 
-class EmailServiceLive(emailRepository: EmailRepository) extends EmailService with ServiceAssistant:
+class EmailServiceLive(emailRepository: EmailRepository) extends EmailService with EmailHelper with ServiceAssistant:
 
   import EmailService._
   import QuillContext._
 
   private val dataSource: ULayer[DataSource] = dataSourceLayer
 
-  override def findByEmailAddress(findByEmailAddressDTO: FindByEmailAddressDTO): IO[ServerError, Email] = transaction {
+  override def findByEmailAddress(findByEmailAddressDTO: FindByEmailAddressDTO): IO[ServerError, Email] = transact {
     emailRepository
       .getByEmailAddress(findByEmailAddressDTO.emailAddress, findByEmailAddressDTO.user)
   }
-    .provide(dataSource)
-    .catchAll(handleError)
 
   override def createEmail(
     createEmailDTO: CreateEmailDTO
-  ): IO[ServerError, Email] =
-    transaction {
-      for {
-        createdAt <- ZIO.succeed(DateTime.now)
-        existingEmail <- emailRepository.checkExistingEmailAddress(
-          emailAddress = createEmailDTO.emailAddress,
-          user = createEmailDTO.user
-        )
-        email <-
-          if (!existingEmail)
-            emailRepository.create(
-              Email(
-                id = UUID.randomUUID,
-                emailAddress = createEmailDTO.emailAddress,
-                verified = false,
-                connected = false,
-                user = createEmailDTO.user,
-                createdAt = createdAt,
-                updatedAt = createdAt
-              )
-            )
-          else
-            ZIO.fail(
-              ServerError.ServiceError(
-                ServerError.ServiceErrorMessage.IllegalServiceCall
-              )
-            )
-      } yield email
-    }.provide(dataSource).catchAll(handleError)
+  ): IO[ServerError, UUID] =
+    transact {
+      createEmailHelper(
+        emailAddress = createEmailDTO.emailAddress,
+        user = createEmailDTO.user,
+        emailRepository = emailRepository
+      )
+    }
 
   override def updateEmailAddress(
     updateEmailAddressDTO: UpdateEmailAddressDTO
-  ): IO[ServerError, Email] = transaction {
+  ): IO[ServerError, Email] = transact {
     for {
-      dateTime      <- ZIO.succeed(DateTime.now)
+      dateTime      <- ZIO.succeed(DateTime.now())
       existingEmail <- emailRepository.checkExistingId(updateEmailAddressDTO.id)
       oldEmail <-
         if (existingEmail)
@@ -87,7 +65,7 @@ class EmailServiceLive(emailRepository: EmailRepository) extends EmailService wi
         )
       )
     } yield email
-  }.provide(dataSource).catchAll(handleError)
+  }
 
   override def isEmailUsable(
     isEmailUsableDTO: IsEmailUsableDTO

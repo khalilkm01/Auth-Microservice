@@ -9,6 +9,7 @@ import services.ContactNumberService
 import repositories.quill.QuillContext
 import zio.*
 import org.joda.time.DateTime
+import services.implementation.contactNumber.ContactNumberHelper
 
 import java.util.UUID
 import javax.sql.DataSource
@@ -17,6 +18,7 @@ class ContactNumberServiceLive(
   twilioClient: TwilioClient,
   contactNumberRepository: ContactNumberRepository
 ) extends ContactNumberService
+    with ContactNumberHelper
     with ServiceAssistant:
 
   import ContactNumberService._
@@ -55,7 +57,7 @@ class ContactNumberServiceLive(
     createContactNumberDTO: CreateContactNumberDTO
   ): IO[ServerError, ContactNumber] = transact {
     for {
-      createdAt <- ZIO.succeed(DateTime.now)
+      createdAt <- ZIO.succeed(DateTime.now())
       existing <- contactNumberRepository.checkExistingNumber(
         countryCode = createContactNumberDTO.countryCode,
         digits = createContactNumberDTO.digits,
@@ -90,35 +92,25 @@ class ContactNumberServiceLive(
   override def verifyPhoneCode(
     verifyPhoneCodeDTO: VerifyPhoneCodeDTO
   ): IO[ServerError, Boolean] = transact {
-    for {
-      contactNumber <- contactNumberRepository.getById(verifyPhoneCodeDTO.id)
-      verify <- twilioClient.verifyPhoneCode(
-        contactNumber.countryCode,
-        contactNumber.digits,
-        verifyPhoneCodeDTO.code
-      )
-    } yield verify
+    verifyPhoneCodeHelper(
+      id = verifyPhoneCodeDTO.id,
+      code = verifyPhoneCodeDTO.code,
+      user = verifyPhoneCodeDTO.user,
+      twilioClient = twilioClient,
+      contactNumberRepository = contactNumberRepository
+    )
   }
 
   override def connectNumber(
     connectNumberDTO: ConnectNumberDTO
   ): IO[ServerError, Boolean] = transact {
-    verifyPhoneCode(
-      VerifyPhoneCodeDTO(
-        id = connectNumberDTO.id,
-        code = connectNumberDTO.code,
-        user = connectNumberDTO.user
-      )
-    ).flatMap {
-      case true =>
-        contactNumberRepository.connectNumber(id = connectNumberDTO.id)
-      case false =>
-        ZIO.fail(
-          ServerError.ServiceError(
-            ServerError.ServiceErrorMessage.InternalServiceError("Phone code verification failed")
-          )
-        )
-    }
+    connectNumberHelper(
+      id = connectNumberDTO.id,
+      code = connectNumberDTO.code,
+      user = connectNumberDTO.user,
+      contactNumberRepository = contactNumberRepository,
+      twilioClient = twilioClient
+    )
   }
   override def disconnectNumber(
     disconnectNumberDTO: DisconnectNumberDTO

@@ -1,7 +1,7 @@
 package services
 
 import models.common.{ AuthData, ServerError }
-import models.enums.UserType
+import models.enums.{ CountryCode, UserType }
 import models.persisted.Login
 import zio.{ IO, Task }
 
@@ -9,10 +9,10 @@ import java.util.UUID
 
 trait LoginService:
   import LoginService._
-  def createLogin(createLoginDTO: CreateLoginDTO): Task[Login]
+  def createLogin(createLoginDTO: CreateLoginDTO): IO[ServerError, AuthData]
   def updateLoginPassword(
     updateLoginPasswordDTO: UpdateLoginPasswordDTO
-  ): Task[Login]
+  ): IO[ServerError, Boolean]
   def loginByEmail(
     loginByEmailDTO: LoginByEmailDTO
   ): IO[ServerError, AuthData]
@@ -20,8 +20,10 @@ trait LoginService:
 object LoginService:
   case class CreateLoginDTO(
     user: UserType,
-    contactNumberId: UUID,
-    emailId: UUID,
+    emailAddress: String,
+    digits: String,
+    countryCode: CountryCode,
+    code: String,
     password: String
   )
   case class UpdateLoginPasswordDTO(
@@ -29,4 +31,4 @@ object LoginService:
     newPassword: String,
     currentPassword: String
   )
-  case class LoginByEmailDTO(email: String, password: String, user: UserType)
+  case class LoginByEmailDTO(emailAddress: String, password: String, user: UserType)
