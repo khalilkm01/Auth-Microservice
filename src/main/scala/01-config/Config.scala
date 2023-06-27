@@ -13,7 +13,8 @@ object Config:
     kafkaConsumerConfig: KafkaConsumerConfig,
     serverConfig: ServerConfig,
     authConfig: AuthConfig,
-    twilioConfig: TwilioConfig
+    twilioConfig: TwilioConfig,
+    jdbc: DBConfig
   )
 
   case class ServerConfig(host: String, port: Int)
@@ -30,7 +31,9 @@ object Config:
   )
   case class TwilioConfig(root: String, account_sid: String, auth_token: String, service_sid: String)
 
-  type AllConfig = AppConfig with KafkaConsumerConfig with ServerConfig with AuthConfig with TwilioConfig
+  case class DBConfig(url: String, driver: String, user: String, password: String)
+
+  type AllConfig = AppConfig with KafkaConsumerConfig with ServerConfig with AuthConfig with TwilioConfig with DBConfig
 
   private final val Root = "application-conf"
   private final val Descriptor: ConfigDescriptor[AppConfig] =
@@ -44,4 +47,5 @@ object Config:
       appConfig.narrow(_.serverConfig) >+>
       appConfig.narrow(_.authConfig) >+>
       appConfig.narrow(_.twilioConfig) >+>
-      appConfig.narrow(_.kafkaConsumerConfig)
+      appConfig.narrow(_.kafkaConsumerConfig) >+>
+      appConfig.narrow(_.jdbc)

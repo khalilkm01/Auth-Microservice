@@ -11,7 +11,7 @@ case class ContactNumber(
   countryCode: CountryCode,
   digits: String,
   connected: Boolean,
-  user: UserType,
+  userType: UserType,
   createdAt: DateTime,
   updatedAt: DateTime
 )

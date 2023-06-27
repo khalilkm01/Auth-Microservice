@@ -7,13 +7,13 @@ import org.joda.time.DateTime
 import zio.json.JsonCodec
 
 case class Email(
-  id: UUID,
-  emailAddress: String,
-  verified: Boolean,
-  user: UserType,
-  connected: Boolean,
-  createdAt: DateTime,
-  updatedAt: DateTime
+                  id: UUID,
+                  emailAddress: String,
+                  verified: Boolean,
+                  userType: UserType,
+                  connected: Boolean,
+                  createdAt: DateTime,
+                  updatedAt: DateTime
 )
 
 object Email:

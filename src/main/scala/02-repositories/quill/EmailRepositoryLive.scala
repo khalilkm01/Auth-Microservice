@@ -52,7 +52,7 @@ final case class EmailRepositoryLive() extends EmailRepository:
             _.emailAddress -> lift(entity.emailAddress),
             _.verified     -> lift(entity.verified),
             _.connected    -> lift(entity.connected),
-            _.user         -> lift(entity.user)
+            _.userType     -> lift(entity.userType)
           )
           .returning(entity ⇒ entity)
       }
@@ -81,7 +81,7 @@ final case class EmailRepositoryLive() extends EmailRepository:
   override def getByEmailAddress(emailAddress: String, user: UserType): QIO[Email] =
     run(
       quote {
-        query[Entity].filter(email ⇒ lift(emailAddress) == email.emailAddress && lift(user) == email.user)
+        query[Entity].filter(email ⇒ lift(emailAddress) == email.emailAddress && lift(user) == email.userType)
       }
     ).map {
       _.headOption match
@@ -100,7 +100,7 @@ final case class EmailRepositoryLive() extends EmailRepository:
 
   override def checkExistingEmailAddress(emailAddress: String, user: UserType): QIO[Boolean] =
     run(quote {
-      query[Entity].filter(email ⇒ lift(emailAddress) == email.emailAddress && lift(user) == email.user)
+      query[Entity].filter(email ⇒ lift(emailAddress) == email.emailAddress && lift(user) == email.userType)
     }).map {
       _.headOption match
         case None    ⇒ false
@@ -118,7 +118,7 @@ final case class EmailRepositoryLive() extends EmailRepository:
               emailAddress = email.emailAddress,
               verified = false,
               connected = true,
-              user = email.user,
+              userType = email.userType,
               createdAt = email.createdAt,
               updatedAt = DateTime.now
             )

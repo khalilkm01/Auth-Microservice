@@ -70,6 +70,17 @@ object Program:
         } yield twilioConfig
       }
 
+  private lazy val dbConfiguration: TaskLayer[Config.DBConfig] =
+    ZLayer
+      .scoped {
+        for {
+          dbConfig <- ZIO
+            .serviceWith[Config.AppConfig](_.jdbc)
+            .provide(Config.layer)
+            .orDie
+        } yield dbConfig
+      }
+
   private lazy val clientsLayer: TaskLayer[JwtClient with TwilioClient] =
     ZLayer.make[JwtClient with TwilioClient](
       JwtClientLive.layer,
@@ -109,6 +120,13 @@ object Program:
       servicesLayer
     )
 
+  private lazy val setupDB: Task[Unit] = {
+    for
+      dbConfig <- ZIO.service[Config.DBConfig]
+      _        <- FlywayMigration.migrate(dbConfig)
+    yield ()
+  }.provide(dbConfiguration)
+
   private lazy val gateway: Task[Unit] =
     ZIO.serviceWithZIO[ApiGateway](_.start).provide(gatewayLayer)
 
@@ -116,7 +134,7 @@ object Program:
     Slf4jBridge.initialize
 
   lazy val make: ZIO[Scope, Any, Any] =
-    gateway
+    setupDB *> gateway
       .provide(logger)
 
 //  private val consumerLayer: TaskLayer[Consumer] =

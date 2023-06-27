@@ -38,7 +38,7 @@ trait LoginHelper:
                 id = UUID.randomUUID,
                 password = password.bcryptBounded(authConfig.private_key),
                 blocked = false,
-                user = user,
+                userType = user,
                 emailId = emailId,
                 contactNumberId = contactNumberId,
                 now,

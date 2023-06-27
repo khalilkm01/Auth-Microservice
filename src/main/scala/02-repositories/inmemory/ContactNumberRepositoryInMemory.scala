@@ -30,13 +30,13 @@ case class ContactNumberRepositoryInMemory(state: Ref[Map[UUID, ContactNumber]])
     yield entity
 
   override def getByNumber(countryCode: CountryCode, digits: String, user: UserType): QIO[ContactNumber] =
-    state.get.map(_.values.find(cn ⇒ cn.countryCode == countryCode && cn.digits == digits && cn.user == user).get)
+    state.get.map(_.values.find(cn ⇒ cn.countryCode == countryCode && cn.digits == digits && cn.userType == user).get)
 
   override def checkExistingId(id: UUID): QIO[Boolean] =
     state.get.map(_.contains(id))
 
   override def checkExistingNumber(countryCode: CountryCode, digits: String, user: UserType): QIO[Boolean] =
-    state.get.map(_.values.exists(cn ⇒ cn.countryCode == countryCode && cn.digits == digits && cn.user == user))
+    state.get.map(_.values.exists(cn ⇒ cn.countryCode == countryCode && cn.digits == digits && cn.userType == user))
 
   override def connectNumber(id: UUID): QIO[Boolean] =
     for

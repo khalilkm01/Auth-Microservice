@@ -53,7 +53,7 @@ final case class ContactNumberRepositoryLive() extends ContactNumberRepository:
             _.countryCode -> lift(entity.countryCode),
             _.digits      -> lift(entity.digits),
             _.connected   -> lift(entity.connected),
-            _.user        -> lift(entity.user)
+            _.userType    -> lift(entity.userType)
           )
           .returning(entity ⇒ entity)
       }
@@ -94,7 +94,7 @@ final case class ContactNumberRepositoryLive() extends ContactNumberRepository:
           query[Entity].filter(contactNumber ⇒
             lift(countryCode) == contactNumber.countryCode
               && lift(digits) == contactNumber.digits
-              && lift(user) == contactNumber.user
+              && lift(user) == contactNumber.userType
           )
         }
       )
@@ -125,7 +125,7 @@ final case class ContactNumberRepositoryLive() extends ContactNumberRepository:
               contactNumber.countryCode,
               contactNumber.digits,
               true,
-              contactNumber.user,
+              contactNumber.userType,
               contactNumber.createdAt,
               DateTime.now
             )
@@ -145,7 +145,7 @@ final case class ContactNumberRepositoryLive() extends ContactNumberRepository:
               contactNumber.countryCode,
               contactNumber.digits,
               false,
-              contactNumber.user,
+              contactNumber.userType,
               contactNumber.createdAt,
               DateTime.now
             )

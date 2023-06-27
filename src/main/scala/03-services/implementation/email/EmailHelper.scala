@@ -29,7 +29,7 @@ trait EmailHelper:
             emailAddress = emailAddress,
             verified = false,
             connected = false,
-            user = user,
+            userType = user,
             createdAt = createdAt,
             updatedAt = createdAt
           )

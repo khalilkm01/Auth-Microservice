@@ -75,7 +75,7 @@ class ContactNumberServiceLive(
               countryCode = createContactNumberDTO.countryCode,
               digits = createContactNumberDTO.digits,
               connected = false,
-              user = createContactNumberDTO.user,
+              userType = createContactNumberDTO.user,
               createdAt,
               createdAt
             )

@@ -51,7 +51,7 @@ final case class LoginRepositoryLive() extends LoginRepository:
           .insert(
             _.password        -> lift(entity.password),
             _.blocked         -> lift(entity.blocked),
-            _.user            -> lift(entity.user),
+            _.userType        -> lift(entity.userType),
             _.emailId         -> lift(entity.emailId),
             _.contactNumberId -> lift(entity.contactNumberId)
           )

@@ -58,7 +58,7 @@ class EmailServiceLive(emailRepository: EmailRepository) extends EmailService wi
           id = oldEmail.id,
           emailAddress = updateEmailAddressDTO.emailAddress,
           verified = false,
-          user = updateEmailAddressDTO.user,
+          userType = updateEmailAddressDTO.user,
           connected = oldEmail.connected,
           createdAt = oldEmail.createdAt,
           updatedAt = dateTime
