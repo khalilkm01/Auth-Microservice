@@ -112,6 +112,13 @@ object LoginRepositorySpec extends ZIOSpecDefault:
           )
           login <- loginRepository.checkExistingId(newLogin.id)
         } yield assertTrue(login)
+      },
+      test("Checking a non-existing id should return false") {
+        for {
+          loginRepository <- ZIO.service[LoginRepository]
+          nonExistentId = UUID.randomUUID
+          exists <- loginRepository.checkExistingId(nonExistentId)
+        } yield assertTrue(!exists)
       }
-    ) @@ TestAspect.parallelN(6) @@ DbMigrationAspect.migrateOnce("classpath:migrations")()
+    ) @@ TestAspect.parallel @@ DbMigrationAspect.migrateOnce("classpath:migrations")()
   }.provideShared(layer)

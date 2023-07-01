@@ -76,6 +76,6 @@ object EmailRepositorySpec extends ZIOSpecDefault {
         } yield assertTrue(email.connected)
 
       }
-    ) @@ TestAspect.parallelN(6) @@ DbMigrationAspect.migrateOnce("classpath:migrations")()
+    ) @@ TestAspect.parallel @@ DbMigrationAspect.migrateOnce("classpath:migrations")()
   }.provideShared(layer)
 }
