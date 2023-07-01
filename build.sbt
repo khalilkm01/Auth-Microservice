@@ -4,10 +4,11 @@ ThisBuild / organization     := "org.thirty7.auth"
 ThisBuild / organizationName := "thirty7"
 ThisBuild / name             := "auth"
 
+Test / fork := true
+
 lazy val root = (project in file("."))
   .settings(
-    name        := "auth",
-    Test / fork := true
+    name := "auth"
   )
 
 libraryDependencies ++= {
@@ -28,26 +29,26 @@ libraryDependencies ++= {
   val testContainersVersion = "0.10.0"
 
   Seq(
-    "com.github.nscala-time" %% "nscala-time"              % nscalaTimeVersion,
-    "com.github.t3hnar"       % "scala-bcrypt_2.13"        % scalaBcryptVersion,
-    "com.github.jwt-scala"   %% "jwt-zio-json"             % zioJsonJwtVersion,
-    "io.getquill"            %% "quill-jdbc-zio"           % quillVersion,
-    "org.flywaydb"            % "flyway-core"              % flywayVersion,
-    "org.postgresql"          % "postgresql"               % postgresqlVersion,
-    "dev.zio"                %% "zio"                      % zioVersion,
-    "dev.zio"                %% "zio-kafka"                % zioKafkaVersion,
-    "dev.zio"                %% "zio-schema"               % zioSchemaVersion,
-    "dev.zio"                %% "zio-http"                 % zioHttpVersion,
-    "dev.zio"                %% "zio-json"                 % zioJsonVersion,
-    "dev.zio"                %% "zio-config"               % zioConfigVersion,
-    "dev.zio"                %% "zio-config-typesafe"      % zioConfigVersion,
-    "dev.zio"                %% "zio-config-magnolia"      % zioConfigVersion,
-    "dev.zio"                %% "zio-logging-slf4j-bridge" % zioLoggingVersion,
-    "dev.zio"                %% "zio-test"                 % zioVersion % Test,
-    "dev.zio"                %% "zio-test-sbt"             % zioVersion % Test,
-    "dev.zio"                %% "zio-test-magnolia"        % zioVersion % Test,
-//    "dev.zio"                %% "zio-test-junit"                    % zioVersion            % Test,
-    "io.github.scottweaver" %% "zio-2-0-testcontainers-postgresql" % testContainersVersion % Test
+    "com.github.nscala-time" %% "nscala-time"                       % nscalaTimeVersion,
+    "com.github.t3hnar"       % "scala-bcrypt_2.13"                 % scalaBcryptVersion,
+    "com.github.jwt-scala"   %% "jwt-zio-json"                      % zioJsonJwtVersion,
+    "io.getquill"            %% "quill-jdbc-zio"                    % quillVersion,
+    "org.flywaydb"            % "flyway-core"                       % flywayVersion,
+    "org.postgresql"          % "postgresql"                        % postgresqlVersion,
+    "dev.zio"                %% "zio"                               % zioVersion,
+    "dev.zio"                %% "zio-kafka"                         % zioKafkaVersion,
+    "dev.zio"                %% "zio-schema"                        % zioSchemaVersion,
+    "dev.zio"                %% "zio-http"                          % zioHttpVersion,
+    "dev.zio"                %% "zio-json"                          % zioJsonVersion,
+    "dev.zio"                %% "zio-config"                        % zioConfigVersion,
+    "dev.zio"                %% "zio-config-typesafe"               % zioConfigVersion,
+    "dev.zio"                %% "zio-config-magnolia"               % zioConfigVersion,
+    "dev.zio"                %% "zio-logging-slf4j-bridge"          % zioLoggingVersion,
+    "dev.zio"                %% "zio-test"                          % zioVersion            % Test,
+    "dev.zio"                %% "zio-test-sbt"                      % zioVersion            % Test,
+    "dev.zio"                %% "zio-test-magnolia"                 % zioVersion            % Test,
+    "io.github.scottweaver"  %% "zio-2-0-testcontainers-postgresql" % testContainersVersion % Test,
+    "io.github.scottweaver"  %% "zio-2-0-db-migration-aspect"       % testContainersVersion % Test
     //  "dev.zio" %% "zio-logging" % "2.1.0",
     //  "dev.zio" %% "zio-logging-slf4j" % "2.1.0",
     //  "org.slf4j" % "slf4j-log4j12" % "1.7.36",

@@ -14,26 +14,22 @@ final case class QuillContext() extends PostgresZioJdbcContext(SnakeCase)
 object QuillContext extends PostgresZioJdbcContext(SnakeCase):
   val dataSourceLayer: ULayer[DataSource] =
     Quill.DataSource.fromPrefix("postgres").orDie
-
-  given MappedEncoding[UUID, String] =
-    MappedEncoding[UUID, String](_.toString)
-  given MappedEncoding[String, UUID] =
-    MappedEncoding[String, UUID](UUID.fromString)
-
+  
   given MappedEncoding[DateTime, Date] =
     MappedEncoding[DateTime, Date](_.toDate)
   given MappedEncoding[Date, DateTime] =
     MappedEncoding[Date, DateTime](DateTime(_, DateTimeZone.UTC))
 
-  given MappedEncoding[CountryCode, String] =
-    MappedEncoding[CountryCode, String](_.toString)
-  given MappedEncoding[String, CountryCode] =
-    MappedEncoding[String, CountryCode](CountryCode.fromString)
+  given Encoder[CountryCode] =
+    encoder(java.sql.Types.OTHER, (index, value, row) => row.setObject(index, value, java.sql.Types.OTHER))
+  given Decoder[CountryCode] =
+    decoder(row ⇒ index ⇒ CountryCode.fromString(row.getObject(index).toString))
+  
 
-  given MappedEncoding[UserType, String] =
-    MappedEncoding[UserType, String](_.toString)
-  given MappedEncoding[String, UserType] =
-    MappedEncoding[String, UserType](UserType.fromString)
+  given Encoder[UserType] =
+    encoder(java.sql.Types.OTHER, (index, value, row) => row.setObject(index, value, java.sql.Types.OTHER))
+  given Decoder[UserType] =
+    decoder(row ⇒ index ⇒ UserType.fromString(row.getObject(index).toString))
 
   implicit final class InstantOps(dt: DateTime):
     def >(other: DateTime): Quoted[Boolean] = quote(
