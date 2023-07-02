@@ -10,9 +10,21 @@ enum CountryCode(num: String):
   case NG extends CountryCode("234")
   case US extends CountryCode("1")
 
+  override def toString: String = this.num
+
   def fromCountryCode: UIO[String] = ZIO.succeed(this.num)
 
 object CountryCode:
+
+  def fromNum(
+    num: String
+  ): CountryCode =
+    num match
+      case "44"  ⇒ CountryCode.GB
+      case "1"   ⇒ CountryCode.US
+      case "234" ⇒ CountryCode.NG
+      case _     ⇒ throw IllegalArgumentException(ServerError.InternalServerErrorMessage.IllegalArgumentMessage)
+
   def fromString(
     num: String
   ): CountryCode =

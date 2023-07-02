@@ -14,7 +14,7 @@ final case class QuillContext() extends PostgresZioJdbcContext(SnakeCase)
 object QuillContext extends PostgresZioJdbcContext(SnakeCase):
   val dataSourceLayer: ULayer[DataSource] =
     Quill.DataSource.fromPrefix("postgres").orDie
-  
+
   given MappedEncoding[DateTime, Date] =
     MappedEncoding[DateTime, Date](_.toDate)
   given MappedEncoding[Date, DateTime] =
@@ -23,8 +23,7 @@ object QuillContext extends PostgresZioJdbcContext(SnakeCase):
   given Encoder[CountryCode] =
     encoder(java.sql.Types.OTHER, (index, value, row) => row.setObject(index, value, java.sql.Types.OTHER))
   given Decoder[CountryCode] =
-    decoder(row ⇒ index ⇒ CountryCode.fromString(row.getObject(index).toString))
-  
+    decoder(row ⇒ index ⇒ CountryCode.fromNum(row.getObject(index).toString))
 
   given Encoder[UserType] =
     encoder(java.sql.Types.OTHER, (index, value, row) => row.setObject(index, value, java.sql.Types.OTHER))
