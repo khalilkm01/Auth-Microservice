@@ -19,21 +19,17 @@ case class ContactNumberRepositoryInMemory(state: Ref[Map[UUID, ContactNumber]])
       _ <-
         if exists then state.update(_ + (entity.id -> entity))
         else ZIO.fail(SQLException(s"Model with id ${entity.id} does not exist"))
-    yield entity
+      newEntity <- getById(entity.id)
+    yield newEntity
 
   override def create(entity: Entity): QIO[Entity] =
     for
-      exists <- state.get.map(_.contains(entity.id))
-      _ <-
-        if !exists then state.update(_ + (entity.id -> entity))
-        else ZIO.fail(SQLException(s"Model with existing id ${entity.id}"))
-    yield entity
+      newEntity <- ZIO.succeed(entity.copy(id = UUID.randomUUID()))
+      _         <- state.update(_ + (newEntity.id -> newEntity))
+    yield newEntity
 
   override def getByNumber(countryCode: CountryCode, digits: String, user: UserType): QIO[ContactNumber] =
     state.get.map(_.values.find(cn ⇒ cn.countryCode == countryCode && cn.digits == digits && cn.userType == user).get)
-
-  override def checkExistingId(id: UUID): QIO[Boolean] =
-    state.get.map(_.contains(id))
 
   override def checkExistingNumber(countryCode: CountryCode, digits: String, user: UserType): QIO[Boolean] =
     state.get.map(_.values.exists(cn ⇒ cn.countryCode == countryCode && cn.digits == digits && cn.userType == user))
@@ -42,17 +38,19 @@ case class ContactNumberRepositoryInMemory(state: Ref[Map[UUID, ContactNumber]])
     for
       cn <- getById(id)
       _ <- state
-        .modify(m ⇒ (m + (id -> m(id).copy(connected = true)), m))
+        .updateAndGet(_ + (id -> cn.copy(connected = true)))
         .when(!cn.connected)
-    yield true
+      numberConnected <- getById(id).map(_.connected)
+    yield numberConnected
 
   override def disconnectNumber(id: UUID): QIO[Boolean] =
     for
       cn <- getById(id)
       _ <- state
-        .modify(m ⇒ (m + (id -> m(id).copy(connected = false)), m))
+        .updateAndGet(_ + (id -> cn.copy(connected = false)))
         .when(cn.connected)
-    yield true
+      numberConnected <- getById(id).map(_.connected)
+    yield !numberConnected
 
 object ContactNumberRepositoryInMemory:
 

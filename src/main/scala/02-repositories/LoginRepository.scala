@@ -9,4 +9,4 @@ trait LoginRepository extends Repository[Login]:
   def getByLoginId(id: UUID): QIO[Login]
   def getByEmailId(id: UUID): QIO[Login]
   def getByContactNumberId(id: UUID): QIO[Login]
-  def checkExistingId(id: UUID): QIO[Boolean]
+

@@ -20,3 +20,5 @@ trait Repository[T]:
   def getById(id: UUID): QIO[T]
 
   def getAll: QIO[List[T]]
+
+  def checkExistingId(id: UUID): QIO[Boolean]

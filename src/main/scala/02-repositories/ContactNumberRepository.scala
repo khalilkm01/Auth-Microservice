@@ -10,11 +10,10 @@ trait ContactNumberRepository extends Repository[ContactNumber]:
 
   def getByNumber(countryCode: CountryCode, digits: String, user: UserType): QIO[ContactNumber]
 
-  def checkExistingId(id: UUID): QIO[Boolean]
-
   def checkExistingNumber(countryCode: CountryCode, digits: String, user: UserType): QIO[Boolean]
 
   def connectNumber(id: UUID): QIO[Boolean]
+
   def disconnectNumber(id: UUID): QIO[Boolean]
 
 //  def updateName(id: UUID, name: String): QIO[ContactNumberType]

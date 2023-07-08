@@ -2,20 +2,18 @@ package repositories
 
 import models.enums.UserType
 import models.persisted.Email
-
 import zio.*
 import zio.test.*
 import zio.test.Assertion.*
 import io.github.scottweaver.zio.aspect.DbMigrationAspect
 import io.github.scottweaver.models.JdbcInfo
 import org.joda.time.DateTime
+import repositories.ContactNumberRepositorySpec.{ inMemoryLayer, liveLayer, specSkeleton, suite }
 
 import java.util.UUID
 import javax.sql.DataSource
 
-object EmailRepositorySpec extends ZIOSpecDefault {
-  private lazy val layer: TaskLayer[EmailRepository with DataSource with JdbcInfo] =
-    TestQuillContext.containerLayer >+> quill.EmailRepositoryLive.layer
+object EmailRepositorySpec extends ZIOSpecDefault:
 
   private val baseEmailModel: Email = Email(
     id = UUID.randomUUID(),
@@ -27,8 +25,14 @@ object EmailRepositorySpec extends ZIOSpecDefault {
     updatedAt = DateTime.now()
   )
 
-  def spec: Spec[Any, Throwable] = {
-    suite("EmailRepositorySpec")(
+  def spec: Spec[Any, Throwable] =
+    suite("EmailRepositorySuite")(
+      specSkeleton("Live").provideSomeLayer(quill.EmailRepositoryLive.layer),
+      specSkeleton("InMemory").provideSomeLayer(inmemory.EmailRepositoryInMemory.layer)
+    ).provideShared(TestQuillContext.containerLayer)
+
+  def specSkeleton(label: String): Spec[EmailRepository with DataSource with JdbcInfo, Throwable] =
+    suite(s"EmailRepository${label}Spec")(
       test("Should retrieve Email by email address and user type") {
         for {
           emailRepository <- ZIO.service[EmailRepository]
@@ -69,7 +73,7 @@ object EmailRepositorySpec extends ZIOSpecDefault {
       test("Should handle connectEmail correctly") {
         for {
           emailRepository <- ZIO.service[EmailRepository]
-          emailModel = baseEmailModel
+          emailModel = baseEmailModel.copy(id = UUID.randomUUID, emailAddress = "random@email.com")
           newEmail <- emailRepository.create(emailModel)
           _        <- emailRepository.connectEmail(newEmail.id)
           email    <- emailRepository.getById(newEmail.id)
@@ -77,5 +81,3 @@ object EmailRepositorySpec extends ZIOSpecDefault {
 
       }
     ) @@ TestAspect.parallel @@ DbMigrationAspect.migrateOnce("classpath:migrations")()
-  }.provideShared(layer)
-}

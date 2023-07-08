@@ -13,9 +13,12 @@ import org.joda.time.DateTime
 import java.util.UUID
 import javax.sql.DataSource
 
-object ContactNumberRepositorySpec extends ZIOSpecDefault {
-  private lazy val layer: TaskLayer[ContactNumberRepository with DataSource with JdbcInfo] =
+object ContactNumberRepositorySpec extends ZIOSpecDefault:
+  private lazy val liveLayer: TaskLayer[ContactNumberRepository with DataSource with JdbcInfo] =
     TestQuillContext.containerLayer >+> quill.ContactNumberRepositoryLive.layer
+
+  private lazy val inMemoryLayer: TaskLayer[ContactNumberRepository with DataSource with JdbcInfo] =
+    TestQuillContext.containerLayer >+> inmemory.ContactNumberRepositoryInMemory.layer
 
   private val baseContactNumberModel: ContactNumber = ContactNumber(
     id = UUID.randomUUID(),
@@ -27,8 +30,14 @@ object ContactNumberRepositorySpec extends ZIOSpecDefault {
     updatedAt = DateTime.now()
   )
 
-  def spec: Spec[Any, Throwable] = {
-    suite("ContactNumberRepositorySpec")(
+  def spec: Spec[Any, Throwable] =
+    suite("ContactNumberRepositorySuite")(
+      specSkeleton("Live").provideSomeLayer(quill.ContactNumberRepositoryLive.layer),
+      specSkeleton("InMemory").provideSomeLayer(inmemory.ContactNumberRepositoryInMemory.layer)
+    ).provideShared(TestQuillContext.containerLayer)
+
+  def specSkeleton(label: String): Spec[ContactNumberRepository with DataSource with JdbcInfo, Throwable] =
+    suite(s"ContactNumberRepository${label}Spec")(
       test("Contact number is retrieved by number, countryCode and user type") {
         for {
           contactNumberRepository <- ZIO.service[ContactNumberRepository]
@@ -97,5 +106,3 @@ object ContactNumberRepositorySpec extends ZIOSpecDefault {
 
       }
     ) @@ TestAspect.parallelN(6) @@ DbMigrationAspect.migrateOnce("classpath:migrations")()
-  }.provideShared(layer)
-}

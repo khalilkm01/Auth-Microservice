@@ -15,9 +15,6 @@ import javax.sql.DataSource
 
 object LoginRepositorySpec extends ZIOSpecDefault:
 
-  private lazy val layer: TaskLayer[LoginRepository with DataSource with JdbcInfo] =
-    TestQuillContext.containerLayer >+> quill.LoginRepositoryLive.layer
-
   private val baseLoginModel: Login = Login(
     id = UUID.randomUUID,
     password = "randomString",
@@ -29,8 +26,14 @@ object LoginRepositorySpec extends ZIOSpecDefault:
     updatedAt = DateTime.now()
   )
 
-  def spec: Spec[Any, Throwable] = {
-    suite("LoginRepositorySpec")(
+  def spec: Spec[Any, Throwable] =
+    suite("LoginRepositorySuite")(
+      specSkeleton("Live").provideSomeLayer(quill.LoginRepositoryLive.layer),
+      specSkeleton("InMemory").provideSomeLayer(inmemory.LoginRepositoryInMemory.layer)
+    ).provideShared(TestQuillContext.containerLayer)
+
+  def specSkeleton(label: String): Spec[LoginRepository with DataSource with JdbcInfo, Throwable] =
+    suite(s"LoginRepository${label}Spec")(
       test("Login is created and retrieved") {
         for {
           loginRepository <- ZIO.service[LoginRepository]
@@ -71,7 +74,7 @@ object LoginRepositorySpec extends ZIOSpecDefault:
             loginModel
           )
           _     <- loginRepository.delete(List(newLogin.id))
-          login <- loginRepository.getById(newLogin.id).fold(_ => false, _ => true)
+          login <- loginRepository.checkExistingId(newLogin.id)
         } yield assertTrue(!login)
       },
       test("Login is retrieved by emailId") {
@@ -121,4 +124,3 @@ object LoginRepositorySpec extends ZIOSpecDefault:
         } yield assertTrue(!exists)
       }
     ) @@ TestAspect.parallel @@ DbMigrationAspect.migrateOnce("classpath:migrations")()
-  }.provideShared(layer)
