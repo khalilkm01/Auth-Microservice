@@ -1,4 +1,4 @@
-package gateway.implementation.api
+package gateway.api.implementation
 
 import models.common.ServerError
 import models.infrastructure.Query

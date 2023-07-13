@@ -1,10 +1,11 @@
-package gateway.implementation
+package gateway.api
 
 import config.Config.ServerConfig as AppServerConfig
-import models.common.{ Auth, AuthData, ServerError }
+import models.dto.{ Auth, AuthData }
+import models.common.ServerError
 import services.{ AuthService, ContactNumberService, EmailService, LoginService }
 import gateway.Gateway
-import api.{ AuthApi, ContactNumberApi, EmailApi, LoginApi }
+import implementation.{ AuthApi, ContactNumberApi, EmailApi, LoginApi }
 
 import zio._
 import zio.http.*

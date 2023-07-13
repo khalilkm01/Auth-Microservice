@@ -1,4 +1,4 @@
-package gateway.implementation.api
+package gateway.api.implementation
 
 import models.dto.{ Auth, AuthData }
 import models.common.ServerError

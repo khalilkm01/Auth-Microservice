@@ -6,7 +6,7 @@ import infrastructure.handler.EventHandlerLive
 import infrastructure.kafka.EventBusLive
 import config.Config
 import gateway.Gateway
-import gateway.implementation.ApiGateway
+import gateway.api.ApiGateway
 import services.{ AuthService, ContactNumberService, EmailService, LoginService }
 import services.implementation.{ AuthServiceLive, ContactNumberServiceLive, EmailServiceLive, LoginServiceLive }
 import repositories.{ ContactNumberRepository, EmailRepository, LoginRepository }
@@ -150,8 +150,8 @@ object Program:
 //      } yield consumer
 //    )
 //
-//  private lazy val eventBusLayer: TaskLayer[EventBus] =
-//    ZLayer.make[EventBus](
+//  private lazy val eventBusLayer: TaskLayer[EventHandler] =
+//    ZLayer.make[EventHandler](
 //      EventBusLive.layer,
 //      consumerLayer,
 //      EventHandlerLive.layer,
@@ -162,7 +162,7 @@ object Program:
 //      kafkaConfig <- ZIO.service[Config.KafkaConsumerConfig]
 //      topics = Subscription.Topics(kafkaConfig.topics.toSet)
 //      _ <- ZIO.log("Starting Event Bus") *> ZIO
-//        .serviceWithZIO[EventBus](
+//        .serviceWithZIO[EventHandler](
 //          _.start(
 //            kafkaConfig.parSize,
 //            topics

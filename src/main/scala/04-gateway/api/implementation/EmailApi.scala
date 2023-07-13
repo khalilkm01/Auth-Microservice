@@ -1,4 +1,4 @@
-package gateway.implementation.api
+package gateway.api.implementation
 
 import models.infrastructure._
 import models.infrastructure.Query.given
