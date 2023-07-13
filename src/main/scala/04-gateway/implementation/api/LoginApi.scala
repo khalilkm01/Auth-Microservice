@@ -1,6 +1,7 @@
 package gateway.implementation.api
 
-import models.common.{ AuthData, ServerError }
+import models.dto.AuthData
+import models.common.ServerError
 import models.enums.{ CountryCode, UserType }
 import models.persisted.Login
 import models.infrastructure.*

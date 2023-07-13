@@ -1,7 +1,7 @@
 package clients.implementation
 
 import config.Config.AuthConfig
-import models.common.{ Auth, AuthData }
+import models.dto.{ Auth, AuthData }
 import clients.JwtClient
 import org.joda.time.DateTime
 import pdi.jwt.algorithms.JwtHmacAlgorithm

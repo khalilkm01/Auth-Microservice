@@ -1,6 +1,6 @@
 package models.infrastructure
 
-import models.common.Auth
+import models.dto.Auth
 import models.enums.{ CountryCode, UserType }
 
 import zio.json.JsonCodec

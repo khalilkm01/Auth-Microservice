@@ -1,7 +1,7 @@
 package clients
 
 import config.TestConfig
-import models.common.Auth
+import models.dto.Auth
 import models.enums.UserType
 
 import zio.*

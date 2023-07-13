@@ -1,6 +1,7 @@
 package gateway.implementation.api
 
-import models.common.{ Auth, AuthData, ServerError }
+import models.dto.{ Auth, AuthData }
+import models.common.ServerError
 import models.infrastructure._
 import models.infrastructure.Query.given
 import services.AuthService

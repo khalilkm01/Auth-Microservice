@@ -1,4 +1,4 @@
-package models.common
+package models.dto
 
 import models.enums.UserType
 
@@ -15,7 +15,7 @@ case class AuthData(
 
 object AuthData:
 
-  import models.common.JsonHelper
+  import models.common.{ DateTimeHelper, JsonHelper }
   import JsonHelper.{ deriveCodec, given }
   import DateTimeHelper.given
 

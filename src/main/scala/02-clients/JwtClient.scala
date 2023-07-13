@@ -1,6 +1,6 @@
 package clients
 
-import models.common.{ Auth, AuthData }
+import models.dto.{ Auth, AuthData }
 import zio.Task
 
 trait JwtClient {

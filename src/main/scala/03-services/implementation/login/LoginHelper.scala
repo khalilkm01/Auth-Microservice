@@ -1,7 +1,8 @@
 package services.implementation.login
 
 import clients.JwtClient
-import models.common.{ Auth, AuthData, ServerError }
+import models.dto.{ Auth, AuthData }
+import models.common.ServerError
 import models.enums.UserType
 import models.persisted.Login
 import repositories.{ ContactNumberRepository, EmailRepository, LoginRepository }

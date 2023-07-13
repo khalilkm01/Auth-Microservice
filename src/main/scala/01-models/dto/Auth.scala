@@ -1,4 +1,4 @@
-package models.common
+package models.dto
 
 import models.enums.UserType
 
