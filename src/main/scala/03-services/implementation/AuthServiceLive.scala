@@ -1,6 +1,6 @@
 package services.implementation
 
-import models.common.{ Auth, AuthData }
+import models.dto.{ Auth, AuthData }
 import models.enums.UserType
 import clients.JwtClient
 import services.AuthService

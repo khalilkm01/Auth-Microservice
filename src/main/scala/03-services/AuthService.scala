@@ -1,6 +1,6 @@
 package services
 
-import models.common.{ Auth, AuthData }
+import models.dto.{ Auth, AuthData }
 import models.enums.UserType
 import zio.http.Request
 import zio.{ Task, UIO }

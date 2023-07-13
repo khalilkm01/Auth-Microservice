@@ -1,6 +1,7 @@
 package services
 
-import models.common.{ AuthData, ServerError }
+import models.dto.AuthData
+import models.common.ServerError
 import models.enums.{ CountryCode, UserType }
 import models.persisted.Login
 import zio.{ IO, Task }
