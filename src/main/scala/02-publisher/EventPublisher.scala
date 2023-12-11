@@ -1,11 +1,12 @@
 package publisher
 
-import models.infrastructure.KafkaMessage
+import models.infrastructure.{ Event, KafkaMessage }
 import zio.Task
 
+import java.util.UUID
 
 trait EventPublisher:
   def publishEvent(
-      kafkaMessage: KafkaMessage,
-      topic: String
-  ): Task[Either[String, Unit]]
+                    key: UUID,
+                    event: Event
+                  ): Task[Either[String, Unit]]

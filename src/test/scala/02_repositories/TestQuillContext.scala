@@ -1,7 +1,7 @@
 package repositories
 
-import io.github.scottweaver.models.JdbcInfo
 import zio.*
+import io.github.scottweaver.models.JdbcInfo
 import io.github.scottweaver.zio.testcontainers.postgres.ZPostgreSQLContainer
 import io.github.scottweaver.zio.testcontainers.postgresql.PostgresContainer
 import io.github.scottweaver.zio.aspect.DbMigrationAspect
@@ -12,7 +12,7 @@ import javax.sql.DataSource
 
 object TestQuillContext:
 
-  val containerLayer: TaskLayer[DataSource with JdbcInfo] =
+  val pgContainerLayer: TaskLayer[DataSource with JdbcInfo] =
     ZPostgreSQLContainer.Settings.default >+> ZPostgreSQLContainer.live
 
   val migrate: TestAspect[Nothing, JdbcInfo, Nothing, Any] =

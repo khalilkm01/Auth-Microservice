@@ -35,8 +35,7 @@ final case class KafkaGateway(consumer: Consumer, eventHandler: EventHandler, to
   }
 
 object KafkaGateway:
-  type Services              = Any
-  private type EnvironmentIn = Services with Consumer with EventHandler with Subscription
+  type EnvironmentIn = Consumer with EventHandler with Subscription
   private type GatewayOut = Gateway[
     EnvironmentIn
   ]

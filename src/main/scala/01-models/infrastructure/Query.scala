@@ -18,6 +18,7 @@ case class UpdateContactNumberQuery(countryCode: CountryCode, digits: String, us
 
 case class LoginUserQuery(emailAddress: String, password: String, user: UserType) extends Query
 case class CreateLoginQuery(
+  loginId: UUID,
   emailAddress: String,
   password: String,
   countryCode: String,
@@ -26,6 +27,8 @@ case class CreateLoginQuery(
   user: UserType
 ) extends Query
 case class UpdatePasswordQuery(id: UUID, loginId: UUID, currentPassword: String, newPassword: String) extends Query
+
+case class SetupEmailQuery(emailAddress: String, user: UserType) extends Query
 
 case class CheckEmailAvailableQuery(emailAddress: String, user: UserType) extends Query
 
@@ -43,4 +46,5 @@ object Query:
   given JsonCodec[LoginUserQuery]           = deriveCodec
   given JsonCodec[CreateLoginQuery]         = deriveCodec
   given JsonCodec[UpdatePasswordQuery]      = deriveCodec
+  given JsonCodec[SetupEmailQuery]          = deriveCodec
   given JsonCodec[CheckEmailAvailableQuery] = deriveCodec

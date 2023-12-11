@@ -3,28 +3,28 @@ package services.implementation
 import models.enums.CountryCode
 import models.common.ServerError
 import models.persisted.ContactNumber
+import models.infrastructure._
+import models.infrastructure.Event.given
+import publisher.EventPublisher
 import clients.TwilioClient
 import repositories.ContactNumberRepository
 import services.ContactNumberService
-import repositories.quill.QuillContext
+
 import zio.*
+import zio.json._
 import org.joda.time.DateTime
-import services.implementation.contactNumber.ContactNumberHelper
 
 import java.util.UUID
 import javax.sql.DataSource
 
 class ContactNumberServiceLive(
   twilioClient: TwilioClient,
-  contactNumberRepository: ContactNumberRepository
+  contactNumberRepository: ContactNumberRepository,
+  eventPublisher: EventPublisher
 ) extends ContactNumberService
-    with ContactNumberHelper
     with ServiceAssistant:
 
   import ContactNumberService._
-  import QuillContext._
-
-  private val dataSource: ULayer[DataSource] = dataSourceLayer
 
   override def checkExistingNumber(checkExistingNumberDTO: CheckExistingNumberDTO): IO[ServerError, Boolean] =
     transact(
@@ -56,7 +56,7 @@ class ContactNumberServiceLive(
   override def createContactNumber(
     createContactNumberDTO: CreateContactNumberDTO
   ): IO[ServerError, ContactNumber] = transact {
-    for {
+    for
       createdAt <- ZIO.succeed(DateTime.now())
       existing <- contactNumberRepository.checkExistingNumber(
         countryCode = createContactNumberDTO.countryCode,
@@ -86,37 +86,70 @@ class ContactNumberServiceLive(
               ServerError.ServiceErrorMessage.IllegalServiceCall
             )
           )
-    } yield contactNumber
+      _ <- eventPublisher.publishEvent(
+        contactNumber.id,
+        ContactNumberCreatedEvent(contactNumberId = contactNumber.id, user = contactNumber.userType)
+      )
+    yield contactNumber
   }
 
   override def verifyPhoneCode(
     verifyPhoneCodeDTO: VerifyPhoneCodeDTO
   ): IO[ServerError, Boolean] = transact {
-    verifyPhoneCodeHelper(
-      id = verifyPhoneCodeDTO.id,
-      code = verifyPhoneCodeDTO.code,
-      user = verifyPhoneCodeDTO.user,
-      twilioClient = twilioClient,
-      contactNumberRepository = contactNumberRepository
-    )
+    for
+      contactNumber <- contactNumberRepository.getById(verifyPhoneCodeDTO.id)
+      verify <- twilioClient
+        .verifyPhoneCode(
+          contactNumber.countryCode,
+          contactNumber.digits,
+          verifyPhoneCodeDTO.code
+        )
+    yield verify
   }
 
   override def connectNumber(
     connectNumberDTO: ConnectNumberDTO
   ): IO[ServerError, Boolean] = transact {
-    connectNumberHelper(
-      id = connectNumberDTO.id,
-      code = connectNumberDTO.code,
-      user = connectNumberDTO.user,
-      contactNumberRepository = contactNumberRepository,
-      twilioClient = twilioClient
-    )
+    for
+      verify <- verifyPhoneCode(
+        VerifyPhoneCodeDTO(
+          id = connectNumberDTO.contactNumberId,
+          code = connectNumberDTO.code,
+          user = connectNumberDTO.user
+        )
+      )
+      connected <-
+        if verify then
+          for
+            connected <- contactNumberRepository.connectNumber(id = connectNumberDTO.contactNumberId)
+            _ <- eventPublisher.publishEvent(
+              connectNumberDTO.contactNumberId,
+              ContactNumberConnectedEvent(
+                contactNumberId = connectNumberDTO.contactNumberId,
+                user = connectNumberDTO.user
+              ).toJson
+            )
+          yield connected
+        else
+          ZIO.fail(
+            ServerError.ServiceError(
+              ServerError.ServiceErrorMessage.InternalServiceError("Phone code verification failed")
+            )
+          )
+    yield connected
   }
   override def disconnectNumber(
     disconnectNumberDTO: DisconnectNumberDTO
   ): IO[ServerError, Boolean] =
     transact {
-      contactNumberRepository.disconnectNumber(id = disconnectNumberDTO.id)
+      for
+        disconnected <- contactNumberRepository.disconnectNumber(id = disconnectNumberDTO.id)
+
+        _ <- eventPublisher.publishEvent(
+          disconnectNumberDTO.id,
+          ContactNumberDisconnectedEvent(contactNumberId = disconnectNumberDTO.id).toJson
+        )
+      yield disconnected
     }
 //
 //  override def deleteContactNumber(
@@ -124,9 +157,10 @@ class ContactNumberServiceLive(
 //  ): Task[ContactNumber] = ???
 
 object ContactNumberServiceLive:
+
   lazy val layer: ZLayer[
-    TwilioClient with ContactNumberRepository,
+    TwilioClient with ContactNumberRepository with EventPublisher,
     Throwable,
     ContactNumberService
   ] =
-    ZLayer.fromFunction(ContactNumberServiceLive(_, _))
+    ZLayer.fromFunction(ContactNumberServiceLive(_, _, _))

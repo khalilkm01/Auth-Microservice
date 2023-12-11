@@ -6,8 +6,8 @@ import models.common.ServerError
 import services.{ AuthService, ContactNumberService, EmailService, LoginService }
 import gateway.Gateway
 import implementation.{ AuthApi, ContactNumberApi, EmailApi, LoginApi }
-
-import zio._
+import publisher.EventPublisher
+import zio.*
 import zio.http.*
 import zio.http.model.{ HttpError, Method }
 import zio.json.JsonEncoder
@@ -37,8 +37,8 @@ final case class ApiGateway()
         .serve(API_ROUTE) *> ZIO.logInfo("Gateway Closed..")
 
 object ApiGateway:
-  type Services              = AuthService with ContactNumberService with EmailService with LoginService
-  private type EnvironmentIn = Server with Services
+  type Services      = AuthService with ContactNumberService with EmailService with LoginService
+  type EnvironmentIn = Server with Services
   private type GatewayOut = Gateway[
     EnvironmentIn
   ]

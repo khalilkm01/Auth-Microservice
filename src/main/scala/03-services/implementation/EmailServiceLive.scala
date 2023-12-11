@@ -2,23 +2,27 @@ package services.implementation
 
 import models.common.ServerError
 import models.persisted.Email
-import services.EmailService
-import org.joda.time.DateTime
+import models.infrastructure.*
+import models.infrastructure.Event.given
+import publisher.EventPublisher
 import repositories.quill.QuillContext
 import repositories.EmailRepository
-import services.implementation.email.EmailHelper
+import services.EmailService
+
 import zio.*
+import zio.json._
+import org.joda.time.DateTime
 
 import java.sql.SQLException
 import java.util.UUID
 import javax.sql.DataSource
 
-class EmailServiceLive(emailRepository: EmailRepository) extends EmailService with EmailHelper with ServiceAssistant:
+class EmailServiceLive(emailRepository: EmailRepository, eventPublisher: EventPublisher)
+    extends EmailService
+    with ServiceAssistant:
 
   import EmailService._
   import QuillContext._
-
-  private val dataSource: ULayer[DataSource] = dataSourceLayer
 
   override def findByEmailAddress(findByEmailAddressDTO: FindByEmailAddressDTO): IO[ServerError, Email] = transact {
     emailRepository
@@ -29,12 +33,63 @@ class EmailServiceLive(emailRepository: EmailRepository) extends EmailService wi
     createEmailDTO: CreateEmailDTO
   ): IO[ServerError, UUID] =
     transact {
-      createEmailHelper(
-        emailAddress = createEmailDTO.emailAddress,
-        user = createEmailDTO.user,
-        emailRepository = emailRepository
-      )
+      for
+        createdAt <- ZIO.succeed(DateTime.now())
+        existingEmail <- emailRepository.checkExistingEmailAddress(
+          emailAddress = createEmailDTO.emailAddress,
+          user = createEmailDTO.user
+        )
+        email <-
+          if (!existingEmail)
+            emailRepository.create(
+              Email(
+                id = UUID.randomUUID,
+                emailAddress = createEmailDTO.emailAddress,
+                verified = false,
+                connected = false,
+                userType = createEmailDTO.user,
+                createdAt = createdAt,
+                updatedAt = createdAt
+              )
+            )
+          else
+            ZIO.fail(
+              ServerError.ServiceError(
+                ServerError.ServiceErrorMessage.IllegalServiceCall
+              )
+            )
+        _ <- eventPublisher.publishEvent(
+          email.id,
+          EmailCreatedEvent(email.id, createEmailDTO.user)
+        )
+      yield email.id
     }
+
+  override def connectEmail(connectEmailDTO: ConnectEmailDTO): IO[ServerError, Boolean] = transact {
+    for
+      connected <- emailRepository.connectEmail(id = connectEmailDTO.emailId)
+      _ <- eventPublisher.publishEvent(
+        connectEmailDTO.emailId,
+        EmailConnectedEvent(
+          emailId = connectEmailDTO.emailId,
+          user = connectEmailDTO.user
+        )
+      )
+    yield connected
+  }
+  override def disconnectEmail(disconnectEmailDTO: DisconnectEmailDTO): IO[ServerError, Boolean] = transact {
+    for
+      disconnected <- emailRepository.disconnectEmail(id = disconnectEmailDTO.id)
+
+      _ <- eventPublisher.publishEvent(
+        KafkaMessage(
+          disconnectEmailDTO.id,
+          EmailDisconnectedEvent(emailId = disconnectEmailDTO.id)
+        ),
+        EventTopics.EMAIL_TOPIC
+      )
+    yield disconnected
+  }
 
   override def updateEmailAddress(
     updateEmailAddressDTO: UpdateEmailAddressDTO
@@ -64,6 +119,10 @@ class EmailServiceLive(emailRepository: EmailRepository) extends EmailService wi
           updatedAt = dateTime
         )
       )
+      _ <- eventPublisher.publishEvent(
+        email.id,
+        EmailUpdatedEvent(emailId = email.id, emailAddress = email.emailAddress)
+      )
     } yield email
   }
 
@@ -80,5 +139,5 @@ class EmailServiceLive(emailRepository: EmailRepository) extends EmailService wi
     }
 
 object EmailServiceLive:
-  lazy val layer: ZLayer[EmailRepository, Nothing, EmailService] =
-    ZLayer.fromFunction(EmailServiceLive(_))
+  lazy val layer: ZLayer[EmailRepository with EventPublisher, Nothing, EmailService] =
+    ZLayer.fromFunction(EmailServiceLive(_, _))

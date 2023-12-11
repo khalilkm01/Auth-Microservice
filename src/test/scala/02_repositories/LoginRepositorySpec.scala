@@ -30,7 +30,7 @@ object LoginRepositorySpec extends ZIOSpecDefault:
     suite("LoginRepositorySuite")(
       specSkeleton("Live").provideSomeLayer(quill.LoginRepositoryLive.layer),
       specSkeleton("InMemory").provideSomeLayer(inmemory.LoginRepositoryInMemory.layer)
-    ).provideShared(TestQuillContext.containerLayer)
+    ).provideShared(TestQuillContext.pgContainerLayer)
 
   def specSkeleton(label: String): Spec[LoginRepository with DataSource with JdbcInfo, Throwable] =
     suite(s"LoginRepository${label}Spec")(
@@ -122,5 +122,12 @@ object LoginRepositorySpec extends ZIOSpecDefault:
           nonExistentId = UUID.randomUUID
           exists <- loginRepository.checkExistingId(nonExistentId)
         } yield assertTrue(!exists)
+      },
+      test("Generated UUID is passed in") {
+        for {
+          loginRepository <- ZIO.service[LoginRepository]
+          newUUID = UUID.randomUUID
+          newLogin <- loginRepository.create(baseLoginModel.copy(id = newUUID))
+        } yield assertTrue(newLogin.id == newUUID)
       }
     ) @@ TestAspect.parallel @@ DbMigrationAspect.migrateOnce("classpath:migrations")()

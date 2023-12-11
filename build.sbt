@@ -48,7 +48,8 @@ libraryDependencies ++= {
     "dev.zio"                %% "zio-test-sbt"                      % zioVersion            % Test,
     "dev.zio"                %% "zio-test-magnolia"                 % zioVersion            % Test,
     "io.github.scottweaver"  %% "zio-2-0-testcontainers-postgresql" % testContainersVersion % Test,
-    "io.github.scottweaver"  %% "zio-2-0-db-migration-aspect"       % testContainersVersion % Test
+    "io.github.scottweaver"  %% "zio-2-0-db-migration-aspect"       % testContainersVersion % Test,
+    "io.github.scottweaver"  %% "zio-2-0-testcontainers-kafka"      % testContainersVersion % Test
     //  "dev.zio" %% "zio-logging" % "2.1.0",
     //  "dev.zio" %% "zio-logging-slf4j" % "2.1.0",
     //  "org.slf4j" % "slf4j-log4j12" % "1.7.36",

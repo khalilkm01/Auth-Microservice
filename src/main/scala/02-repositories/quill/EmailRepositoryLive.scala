@@ -110,21 +110,13 @@ final case class EmailRepositoryLive() extends EmailRepository:
   override def connectEmail(id: UUID): QIO[Boolean] =
     getById(id).foldZIO(
       ZIO.fail(_),
-      {
-        case email if !email.connected ⇒
-          save(
-            Email(
-              id = email.id,
-              emailAddress = email.emailAddress,
-              verified = false,
-              connected = true,
-              userType = email.userType,
-              createdAt = email.createdAt,
-              updatedAt = DateTime.now
-            )
-          ).as(true)
-        case _ ⇒ ZIO.succeed(false)
-      }
+      email ⇒ save(email.copy(connected = true, updatedAt = DateTime.now)).as(true)
+    )
+
+  override def disconnectEmail(id: UUID): QIO[Boolean] =
+    getById(id).foldZIO(
+      ZIO.fail(_),
+      email ⇒ save(email.copy(connected = false, updatedAt = DateTime.now)).as(true)
     )
 
 object EmailRepositoryLive:

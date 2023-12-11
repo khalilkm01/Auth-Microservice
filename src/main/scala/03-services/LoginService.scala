@@ -20,6 +20,7 @@ trait LoginService:
 
 object LoginService:
   case class CreateLoginDTO(
+    loginId: UUID,
     user: UserType,
     emailAddress: String,
     digits: String,

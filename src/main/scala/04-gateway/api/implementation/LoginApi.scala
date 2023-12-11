@@ -70,6 +70,7 @@ trait LoginApi extends HttpHelper:
             user         = query.user
             code         = query.code
             digits       = query.digits
+            loginId      = query.loginId
             countryCode <- CountryCode.toCountryCode(query.countryCode)
 
             levelsRequired: List[UserType] = user match
@@ -85,6 +86,7 @@ trait LoginApi extends HttpHelper:
                   .serviceWithZIO[LoginService](
                     _.createLogin(
                       CreateLoginDTO(
+                        loginId = loginId,
                         emailAddress = emailAddress,
                         password = password,
                         user = user,
@@ -95,7 +97,6 @@ trait LoginApi extends HttpHelper:
                     )
                   )
               else ZIO.fail(ServerError.NotFoundError("ILLEGAL SERVICE CALL"))
-
           } yield createUser
         )
     }

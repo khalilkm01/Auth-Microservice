@@ -22,10 +22,7 @@ case class EmailRepositoryInMemory(state: Ref[Map[UUID, Email]]) extends InMemor
     yield newEntity
 
   override def create(entity: Entity): QIO[Entity] =
-    for
-      newEntity <- ZIO.succeed(entity.copy(id = UUID.randomUUID))
-      _         <- state.update(_ + (newEntity.id -> newEntity))
-    yield newEntity
+    state.update(_ + (entity.id -> entity)).as(entity)
 
   override def getByEmailAddress(emailAddress: String, user: UserType): QIO[Email] =
     state.get.map(_.values.find(_.emailAddress == emailAddress).get)
@@ -37,10 +34,19 @@ case class EmailRepositoryInMemory(state: Ref[Map[UUID, Email]]) extends InMemor
     for
       e <- getById(id)
       _ <- state
-        .updateAndGet(_ + (id -> e.copy(connected = true)))
-        .when(!e.connected)
+        .updateAndGet(_ + (id -> e.copy(connected = true, updatedAt = DateTime.now())))
+
       emailConnected <- getById(id).map(_.connected)
     yield emailConnected
+
+  override def disconnectEmail(id: UUID): QIO[Boolean] =
+    for
+      email <- getById(id)
+      _ <- state
+        .updateAndGet(_ + (id -> email.copy(connected = false, updatedAt = DateTime.now())))
+
+      emailConnected <- getById(id).map(_.connected)
+    yield !emailConnected
 
 object EmailRepositoryInMemory:
   lazy val layer: ULayer[EmailRepository] =

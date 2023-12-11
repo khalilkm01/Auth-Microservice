@@ -5,14 +5,16 @@ import models.dto.{ Auth, AuthData }
 import models.common.ServerError
 import models.enums.UserType
 import models.persisted.Login
+import models.infrastructure._
+import models.infrastructure.Event.given
+import publisher.EventPublisher
 import clients.{ JwtClient, TwilioClient }
 import repositories.{ ContactNumberRepository, EmailRepository, LoginRepository }
 import repositories.quill.QuillContext
 import services.LoginService
-import services.implementation.contactNumber.ContactNumberHelper
-import services.implementation.email.EmailHelper
-import services.implementation.login.LoginHelper
+
 import zio.*
+import zio.json._
 import com.github.t3hnar.bcrypt.*
 import org.joda.time.DateTime
 import io.getquill.context.ZioJdbc.QIO
@@ -24,26 +26,23 @@ import javax.sql.DataSource
 class LoginServiceLive(
   jwtClient: JwtClient,
   twilioClient: TwilioClient,
+  eventPublisher: EventPublisher,
   loginRepository: LoginRepository,
   contactNumberRepository: ContactNumberRepository,
   emailRepository: EmailRepository,
   authConfig: AuthConfig
 ) extends LoginService
-    with ContactNumberHelper
-    with EmailHelper
-    with LoginHelper
     with ServiceAssistant:
 
   import LoginService._
   import QuillContext._
-
-  private val dataSource: ULayer[DataSource] = dataSourceLayer
 
   override def createLogin(
     createLoginDTO: CreateLoginDTO
   ): IO[ServerError, AuthData] =
     transact {
       for
+        now <- ZIO.succeed(DateTime.now())
         contactNumber <-
           contactNumberRepository
             .getByNumber(
@@ -51,42 +50,40 @@ class LoginServiceLive(
               digits = createLoginDTO.digits,
               user = createLoginDTO.user
             )
+        email <-
+          emailRepository.getByEmailAddress(emailAddress = createLoginDTO.emailAddress, user = createLoginDTO.user)
 
-        emailId <-
-          createEmailHelper(
-            emailRepository = emailRepository,
-            emailAddress = createLoginDTO.emailAddress,
-            user = createLoginDTO.user
+        _ <- loginRepository.create(
+          Login(
+            id = createLoginDTO.loginId,
+            password = createLoginDTO.password.bcryptBounded(authConfig.private_key),
+            blocked = false,
+            userType = createLoginDTO.user,
+            emailId = email.id,
+            contactNumberId = contactNumber.id,
+            now,
+            now
           )
-
-        _ <- connectNumberHelper(
-          id = contactNumber.id,
-          code = createLoginDTO.code,
-          user = createLoginDTO.user,
-          twilioClient = twilioClient,
-          contactNumberRepository = contactNumberRepository
-        )
-
-        _ <- createUserHelper(
-          contactNumberId = contactNumber.id,
-          emailId = emailId,
-          password = createLoginDTO.password,
-          user = createLoginDTO.user,
-          emailRepository = emailRepository,
-          contactNumberRepository = contactNumberRepository,
-          loginRepository = loginRepository,
-          authConfig = authConfig
         )
 
         loginUser <-
-          loginByEmailHelper(
-            emailAddress = createLoginDTO.emailAddress,
-            password = createLoginDTO.password,
-            user = createLoginDTO.user,
-            loginRepository = loginRepository,
-            emailRepository = emailRepository,
-            jwtClient = jwtClient
+          jwtClient.generateToken(
+            Auth(loginId = createLoginDTO.loginId, isAuth = true, authLevel = createLoginDTO.user)
           )
+
+        _ <- eventPublisher.publishEvent(
+          KafkaMessage(
+            createLoginDTO.loginId,
+            LoginCreatedEvent(
+              loginId = createLoginDTO.loginId,
+              contactNumberId = contactNumber.id,
+              emailId = email.id,
+              user = createLoginDTO.user,
+              code = createLoginDTO.code
+            ).toJson
+          ),
+          EventTopics.LOGIN_TOPIC
+        )
       yield loginUser
     }
 
@@ -118,6 +115,16 @@ class LoginServiceLive(
                 .UnauthorizedAccessError(loginModel.id)
             )
           )
+      _ <- eventPublisher.publishEvent(
+        KafkaMessage(
+          loginModel.id,
+          LoginPasswordUpdatedEvent(
+            loginId = loginModel.id,
+            user = loginModel.userType
+          ).toJson
+        ),
+        EventTopics.LOGIN_TOPIC
+      )
 
     } yield login
   }
@@ -126,20 +133,32 @@ class LoginServiceLive(
     loginByEmailDTO: LoginByEmailDTO
   ): IO[ServerError, AuthData] =
     transact {
-      loginByEmailHelper(
-        emailAddress = loginByEmailDTO.emailAddress,
-        password = loginByEmailDTO.password,
-        user = loginByEmailDTO.user,
-        loginRepository = loginRepository,
-        emailRepository = emailRepository,
-        jwtClient = jwtClient
-      )
+      for
+        email <- emailRepository.getByEmailAddress(
+          emailAddress = loginByEmailDTO.emailAddress,
+          user = loginByEmailDTO.user
+        )
+        login <- loginRepository.getByEmailId(email.id)
+        compare <- ZIO
+          .fromTry(loginByEmailDTO.password.isBcryptedSafeBounded(login.password))
+        authData <-
+          if (compare)
+            jwtClient.generateToken(Auth(loginId = login.id, isAuth = compare, authLevel = loginByEmailDTO.user))
+          else
+            ZIO.fail(ServerError.ServiceError(ServerError.ServiceErrorMessage.LoginError))
+      yield authData
     }
 
 object LoginServiceLive:
   lazy val layer: ZLayer[
-    JwtClient with TwilioClient with LoginRepository with EmailRepository with ContactNumberRepository with AuthConfig,
+    JwtClient
+      with TwilioClient
+      with EventPublisher
+      with LoginRepository
+      with EmailRepository
+      with ContactNumberRepository
+      with AuthConfig,
     Throwable,
     LoginService
   ] =
-    ZLayer.fromFunction(LoginServiceLive(_, _, _, _, _, _))
+    ZLayer.fromFunction(LoginServiceLive(_, _, _, _, _, _, _))

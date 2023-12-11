@@ -10,7 +10,7 @@ import zio.config.syntax.*
 object Config:
 
   case class AppConfig(
-    kafkaConsumerConfig: KafkaConsumerConfig,
+    kafkaConfig: KafkaConfig,
     serverConfig: ServerConfig,
     authConfig: AuthConfig,
     twilioConfig: TwilioConfig,
@@ -19,11 +19,13 @@ object Config:
 
   case class ServerConfig(host: String, port: Int)
 
-  case class KafkaConsumerConfig(
+  case class KafkaConfig(
     server: String,
     groupId: String,
+    clientId: String,
     parSize: Int,
-    topics: List[String]
+    topics: List[String],
+    publishTopic: String
   )
 
   case class AuthConfig(
@@ -33,7 +35,7 @@ object Config:
 
   case class DBConfig(url: String, driver: String, user: String, password: String)
 
-  type AllConfig = AppConfig with KafkaConsumerConfig with ServerConfig with AuthConfig with TwilioConfig with DBConfig
+  type AllConfig = AppConfig with KafkaConfig with ServerConfig with AuthConfig with TwilioConfig with DBConfig
 
   private final val Root = "application-conf"
   private final val Descriptor: ConfigDescriptor[AppConfig] =
@@ -47,5 +49,5 @@ object Config:
       appConfig.narrow(_.serverConfig) >+>
       appConfig.narrow(_.authConfig) >+>
       appConfig.narrow(_.twilioConfig) >+>
-      appConfig.narrow(_.kafkaConsumerConfig) >+>
+      appConfig.narrow(_.kafkaConfig) >+>
       appConfig.narrow(_.jdbc)

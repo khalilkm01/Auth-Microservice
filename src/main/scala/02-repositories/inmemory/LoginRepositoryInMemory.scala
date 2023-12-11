@@ -20,10 +20,7 @@ case class LoginRepositoryInMemory(state: Ref[Map[UUID, Login]]) extends InMemor
     yield newEntity
 
   override def create(entity: Entity): QIO[Entity] =
-    for
-      newEntity <- ZIO.succeed(entity.copy(id = UUID.randomUUID()))
-      _         <- state.update(_ + (newEntity.id -> newEntity))
-    yield newEntity
+    state.update(_ + (entity.id -> entity)).as(entity)
 
   override def getByEmailId(id: UUID): QIO[Login] =
     state.get.map(_.values.find(_.emailId == id).get)

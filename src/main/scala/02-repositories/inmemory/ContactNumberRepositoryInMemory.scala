@@ -3,6 +3,7 @@ package repositories.inmemory
 import io.getquill.context.ZioJdbc.QIO
 import models.enums.{ CountryCode, UserType }
 import models.persisted.ContactNumber
+import org.joda.time.DateTime
 import repositories.ContactNumberRepository
 import zio.*
 
@@ -23,10 +24,7 @@ case class ContactNumberRepositoryInMemory(state: Ref[Map[UUID, ContactNumber]])
     yield newEntity
 
   override def create(entity: Entity): QIO[Entity] =
-    for
-      newEntity <- ZIO.succeed(entity.copy(id = UUID.randomUUID()))
-      _         <- state.update(_ + (newEntity.id -> newEntity))
-    yield newEntity
+    state.update(_ + (entity.id -> entity)).as(entity)
 
   override def getByNumber(countryCode: CountryCode, digits: String, user: UserType): QIO[ContactNumber] =
     state.get.map(_.values.find(cn ⇒ cn.countryCode == countryCode && cn.digits == digits && cn.userType == user).get)
@@ -38,8 +36,8 @@ case class ContactNumberRepositoryInMemory(state: Ref[Map[UUID, ContactNumber]])
     for
       cn <- getById(id)
       _ <- state
-        .updateAndGet(_ + (id -> cn.copy(connected = true)))
-        .when(!cn.connected)
+        .updateAndGet(_ + (id -> cn.copy(connected = true, updatedAt = DateTime.now)))
+
       numberConnected <- getById(id).map(_.connected)
     yield numberConnected
 
@@ -47,8 +45,8 @@ case class ContactNumberRepositoryInMemory(state: Ref[Map[UUID, ContactNumber]])
     for
       cn <- getById(id)
       _ <- state
-        .updateAndGet(_ + (id -> cn.copy(connected = false)))
-        .when(cn.connected)
+        .updateAndGet(_ + (id -> cn.copy(connected = false, updatedAt = DateTime.now)))
+
       numberConnected <- getById(id).map(_.connected)
     yield !numberConnected
 

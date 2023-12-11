@@ -1,30 +1,34 @@
 package publisher.kafka
 
-import models.infrastructure.KafkaMessage
+import models.infrastructure.{ Event, KafkaMessage }
+import models.infrastructure.Event.given
 import publisher.EventPublisher
+
 import zio.kafka.producer.Producer
 import zio.kafka.serde.Serde
-import zio.{Task, ZIO, ZLayer}
+import zio.{ Task, ZIO, ZLayer }
+import zio.json._
 
-case class EventPublisherLive(producer: Producer) extends EventPublisher {
+import java.util.UUID
+
+case class EventPublisherLive(producer: Producer) extends EventPublisher:
   import KafkaMessage.*
   override def publishEvent(
-      kafkaMessage: KafkaMessage,
-      topic: String
+    key: UUID,
+    event: Event
   ): Task[Either[String, Unit]] =
-    producer
+    ZIO.logInfo(s"Publishing Event with key: $key to topic: ${event.getTopic}") *> producer
       .produce(
-        topic,
-        kafkaMessage.key,
-        kafkaMessage,
-        Serde.string,
-        kafkaMessageSerde
+        topic = event.getTopic.toString,
+        key = key,
+        value = KafkaMessage(key = key, payload = event.toJson, channel = event.getChannel),
+        keySerializer = Serde.uuid,
+        valueSerializer = kafkaMessageSerde
       )
       .foldZIO(
         failure ⇒ ZIO.left(failure.getMessage),
         _ ⇒ ZIO.right(())
       )
-}
 
 object EventPublisherLive:
   lazy val layer: ZLayer[Producer, Nothing, EventPublisher] =

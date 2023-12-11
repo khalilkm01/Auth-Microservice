@@ -49,6 +49,7 @@ final case class LoginRepositoryLive() extends LoginRepository:
       quote {
         query[Entity]
           .insert(
+            _.id              -> lift(entity.id),
             _.password        -> lift(entity.password),
             _.blocked         -> lift(entity.blocked),
             _.userType        -> lift(entity.userType),

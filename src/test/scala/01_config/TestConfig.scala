@@ -22,3 +22,4 @@ object TestConfig:
 
   val authConfig: TaskLayer[AuthConfig]     = appConfig.narrow(_.authConfig)
   val twilioConfig: TaskLayer[TwilioConfig] = appConfig.narrow(_.twilioConfig)
+  val kafkaConfig: TaskLayer[KafkaConfig]   = appConfig.narrow(_.kafkaConfig)

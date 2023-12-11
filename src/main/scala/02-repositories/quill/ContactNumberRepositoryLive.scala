@@ -117,41 +117,13 @@ final case class ContactNumberRepositoryLive() extends ContactNumberRepository:
   override def connectNumber(id: UUID): QIO[Boolean] =
     getById(id).foldZIO(
       ZIO.fail(_),
-      {
-        case contactNumber if !contactNumber.connected ⇒
-          save(
-            ContactNumber(
-              contactNumber.id,
-              contactNumber.countryCode,
-              contactNumber.digits,
-              true,
-              contactNumber.userType,
-              contactNumber.createdAt,
-              DateTime.now
-            )
-          ).as(true)
-        case _ ⇒ ZIO.succeed(false)
-      }
+      contactNumber ⇒ save(contactNumber.copy(connected = true, updatedAt = DateTime.now)).as(true)
     )
 
   override def disconnectNumber(id: UUID): QIO[Boolean] =
     getById(id).foldZIO(
       ZIO.fail(_),
-      {
-        case contactNumber if contactNumber.connected ⇒
-          save(
-            ContactNumber(
-              contactNumber.id,
-              contactNumber.countryCode,
-              contactNumber.digits,
-              false,
-              contactNumber.userType,
-              contactNumber.createdAt,
-              DateTime.now
-            )
-          ).as(true)
-        case _ ⇒ ZIO.succeed(false)
-      }
+      contactNumber ⇒ save(contactNumber.copy(connected = false, updatedAt = DateTime.now)).as(true)
     )
 
 object ContactNumberRepositoryLive:

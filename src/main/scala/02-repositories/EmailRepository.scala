@@ -11,3 +11,4 @@ trait EmailRepository extends Repository[Email]:
 
   def checkExistingEmailAddress(emailAddress: String, user: UserType): QIO[Boolean]
   def connectEmail(id: UUID): QIO[Boolean]
+  def disconnectEmail(id: UUID): QIO[Boolean]

@@ -15,10 +15,10 @@ import javax.sql.DataSource
 
 object ContactNumberRepositorySpec extends ZIOSpecDefault:
   private lazy val liveLayer: TaskLayer[ContactNumberRepository with DataSource with JdbcInfo] =
-    TestQuillContext.containerLayer >+> quill.ContactNumberRepositoryLive.layer
+    TestQuillContext.pgContainerLayer >+> quill.ContactNumberRepositoryLive.layer
 
   private lazy val inMemoryLayer: TaskLayer[ContactNumberRepository with DataSource with JdbcInfo] =
-    TestQuillContext.containerLayer >+> inmemory.ContactNumberRepositoryInMemory.layer
+    TestQuillContext.pgContainerLayer >+> inmemory.ContactNumberRepositoryInMemory.layer
 
   private val baseContactNumberModel: ContactNumber = ContactNumber(
     id = UUID.randomUUID(),
@@ -34,7 +34,7 @@ object ContactNumberRepositorySpec extends ZIOSpecDefault:
     suite("ContactNumberRepositorySuite")(
       specSkeleton("Live").provideSomeLayer(quill.ContactNumberRepositoryLive.layer),
       specSkeleton("InMemory").provideSomeLayer(inmemory.ContactNumberRepositoryInMemory.layer)
-    ).provideShared(TestQuillContext.containerLayer)
+    ).provideShared(TestQuillContext.pgContainerLayer)
 
   def specSkeleton(label: String): Spec[ContactNumberRepository with DataSource with JdbcInfo, Throwable] =
     suite(s"ContactNumberRepository${label}Spec")(

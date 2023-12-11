@@ -29,7 +29,7 @@ object EmailRepositorySpec extends ZIOSpecDefault:
     suite("EmailRepositorySuite")(
       specSkeleton("Live").provideSomeLayer(quill.EmailRepositoryLive.layer),
       specSkeleton("InMemory").provideSomeLayer(inmemory.EmailRepositoryInMemory.layer)
-    ).provideShared(TestQuillContext.containerLayer)
+    ).provideShared(TestQuillContext.pgContainerLayer)
 
   def specSkeleton(label: String): Spec[EmailRepository with DataSource with JdbcInfo, Throwable] =
     suite(s"EmailRepository${label}Spec")(

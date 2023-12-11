@@ -40,5 +40,5 @@ object ContactNumberService:
   )
   case class VerifyPhoneCodeDTO(id: UUID, code: String, user: UserType)
 
-  case class ConnectNumberDTO(id: UUID, code: String, user: UserType)
+  case class ConnectNumberDTO(contactNumberId: UUID, loginId: UUID, code: String, user: UserType)
   case class DisconnectNumberDTO(id: UUID)
